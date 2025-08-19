@@ -27,14 +27,10 @@ SYS_EXIT    equ 60
 SYS_FORK    equ 57
 SYS_READ    equ 0
 SYS_OPEN    equ 2
+SYS_UNLINK equ 87
 
 ; --- Segmen Data ---
 segment readable writeable
-  method_get  db 'GET '
-  method_post db 'POST '
-  method_del  db 'DELETE '
-  method_put  db 'PUT '
-
   file_root db 'index.html', 0
   file_test db 'test.html', 0
 
@@ -60,9 +56,10 @@ segment readable writeable
 
 ; --- Segmen BSS ---
 segment readable writeable
-  sockaddr_in rb 16
-  request_buffer rb 2048
-  file_buffer    rb 8192
+  sockaddr_in     rb 16
+  request_buffer  rb 2048
+  file_buffer     rb 8192
+  parsed_filename rb 256 ;
 
 ; --- Segmen Kode ---
 segment readable executable
@@ -133,7 +130,7 @@ child_process:
   jmp handle_405
 
 handle_post:
-  xor rcx, rcx ; Gunakan rcx sebagai counter/index loop
+  xor rcx, rcx
 find_body_loop:
   ; Bandingkan 4 byte dari posisi saat ini dengan 0A0D0A0D (CRLFCRLF)
   mov eax, dword [request_buffer + rcx]
@@ -159,63 +156,7 @@ found_body:
   mov r15, rdx
 
   jmp write_post_to_file
-
-handle_put:
-  mov rsi, http_200
-  mov rdx, len_200
-  jmp send_response
-
-handle_del:
-  mov rsi, http_200
-  mov rdx, len_200
-  jmp send_response
-
-handle_400:
-  mov rsi, http_400      
-  mov rdx, len_400       
-  jmp send_response 
-
-handle_404:
-  mov rsi, http_404       
-  mov rdx, len_404        
-  jmp send_response 
-
-handle_405:
-  mov rsi, http_405
-  mov rdx, len_405
-  jmp send_response
-
-handle_get:
-  ; --- Cek untuk path "/test" ---
-  lea rdi, [request_buffer + 4]
-  lea rsi, [path_test]
-  mov rcx, 5
-  repe cmpsb
-  jne check_root  ; Jika tidak diawali "/test", cek untuk "/"
-
-  cmp byte [rdi], ' '
-  je handle_test  ; Jika ya, ini path yang valid
-
-  jmp handle_404
-
-check_root:
-  ; --- Cek untuk path "/" ---
-  mov al, byte [request_buffer + 4]
-  mov ah, byte [request_buffer + 5]
-  cmp al, '/'
-  jne handle_404
-  cmp ah, ' '
-  je handle_root
-
-  jmp handle_404
-
-handle_root:
-  mov rdi, file_root
-  jmp serve_file
-handle_test:
-  mov rdi, file_test
-  jmp serve_file
-
+  
 write_post_to_file:
   ; 1. Buka file untuk ditulis (O_WRONLY | O_CREAT | O_TRUNC)
   mov rax, SYS_OPEN
@@ -241,6 +182,86 @@ write_post_to_file:
   mov rsi, http_201
   mov rdx, len_201
   jmp send_response
+
+handle_del:
+  lea rsi, [request_buffer + 8] ; rsi = pointer ke awal nama file di request
+  lea rdi, [parsed_filename]    ; rdi = pointer ke buffer tujuan
+
+parse_loop_del:
+  mov al, byte [rsi]            ; Ambil satu karakter dari request
+  cmp al, ' '                   ; Apakah karakter itu spasi?
+  je  found_eof_del ; Jika ya, nama file selesai
+  
+  mov byte [rdi], al      ; Salin karakter ke buffer tujuan
+  inc rsi                 ; Pindah ke karakter selanjutnya
+  inc rdi
+  jmp parse_loop_del
+
+found_eof_del:
+  mov byte [rdi], 0       ; Tambahkan null terminator di akhir nama file
+
+  ; --- 2. Panggil Syscall unlink ---
+  mov rax, SYS_UNLINK
+  lea rdi, [parsed_filename] ; Argumen pertama adalah alamat nama file
+  syscall
+
+  ; --- 3. Cek Hasil dan Kirim Respons ---
+  cmp rax, 0              ; Cek apakah unlink berhasil (hasilnya 0)
+  jne handle_404       ; Jika tidak 0, berarti gagal
+
+  mov rsi, http_200
+  mov rdx, len_200
+  jmp send_response
+
+handle_put:
+  mov rsi, http_200
+  mov rdx, len_200
+  jmp send_response
+
+handle_400:
+  mov rsi, http_400      
+  mov rdx, len_400       
+  jmp send_response 
+
+handle_404:
+  mov rsi, http_404       
+  mov rdx, len_404        
+  jmp send_response 
+
+handle_405:
+  mov rsi, http_405
+  mov rdx, len_405
+  jmp send_response
+
+handle_get:
+  lea rsi, [request_buffer + 5] ; rsi = pointer ke awal nama file di request
+  lea rdi, [parsed_filename]    ; rdi = pointer ke buffer tujuan
+  mov rcx, 5
+
+parse_loop_get:
+  mov al, byte [rsi]
+  cmp al, ' '
+  je  found_eof_get
+  mov byte [rdi], al
+  inc rsi
+  inc rdi
+  jmp parse_loop_get
+found_eof_get:
+  mov byte [rdi], 0
+
+  ; Jika path-nya hanya "/", hasil parsing akan menjadi string kosong.
+  cmp byte [parsed_filename], 0
+
+  lea rdi, [parsed_filename]
+  jne serve_parsed_file
+
+  lea rdi, [file_root]
+  jmp serve_file
+
+serve_parsed_file:
+  ; call sanitize_filename
+  lea rdi, [parsed_filename]
+  jmp serve_file
 
 serve_file:
   mov rax, SYS_OPEN
