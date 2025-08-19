@@ -137,83 +137,123 @@ find_body_loop:
   cmp eax, 0A0D0A0Dh
   je found_body
 
-  inc rcx ; Pindah ke byte selanjutnya
-  cmp rcx, r15 ; Cek apakah sudah sampai akhir buffer
+  inc rcx
+  cmp rcx, r15
   jl find_body_loop
 
-  ; Jika loop selesai tanpa menemukan body, anggap request tidak valid
-  jmp handle_400 ; (Kamu perlu buat handler ini)
+  jmp handle_400
 
 found_body:
   ; Jika kita sampai sini, artinya kita menemukan separatornya.
   ; Alamat awal body adalah: request_buffer + rcx + 4
   lea rbx, [request_buffer + rcx + 4]
 
-  mov rdx, r15 ; r15 masih berisi total byte dari read
+  mov rdx, r15
   sub rdx, rcx
   sub rdx, 4
 
   mov r15, rdx
 
   jmp write_post_to_file
-  
+
 write_post_to_file:
-  ; 1. Buka file untuk ditulis (O_WRONLY | O_CREAT | O_TRUNC)
   mov rax, SYS_OPEN
   mov rdi, post_filename
-  mov rsi, O_WRONLY or O_CREAT or O_TRUNC ; Flags: WRONLY | CREAT | TRUNC
+  mov rsi, O_WRONLY or O_CREAT or O_TRUNC
   mov rdx, 644o        ; Mode izin file
   syscall
-  mov r14, rax ; Simpan file descriptor
+  mov r14, rax
 
-  ; 2. Tulis body ke file
   mov rax, SYS_WRITE
   mov rdi, r14 ; file descriptor
   mov rsi, rbx ; pointer ke body (dari hasil pencarian)
   mov rdx, r15 ; berisi panjang body (dari hasil pencarian)
   syscall
 
-  ; 3. Tutup file
   mov rax, SYS_CLOSE
   mov rdi, r14
   syscall
 
-  ; 4. Kirim respons ke klien
   mov rsi, http_201
   mov rdx, len_201
   jmp send_response
 
 handle_del:
-  lea rsi, [request_buffer + 8] ; rsi = pointer ke awal nama file di request
-  lea rdi, [parsed_filename]    ; rdi = pointer ke buffer tujuan
+  lea rsi, [request_buffer + 8] 
+  lea rdi, [parsed_filename]   
 
 parse_loop_del:
-  mov al, byte [rsi]            ; Ambil satu karakter dari request
-  cmp al, ' '                   ; Apakah karakter itu spasi?
-  je  found_eof_del ; Jika ya, nama file selesai
+  mov al, byte [rsi]
+  cmp al, ' '
+  je  found_eof_del
   
-  mov byte [rdi], al      ; Salin karakter ke buffer tujuan
-  inc rsi                 ; Pindah ke karakter selanjutnya
+  mov byte [rdi], al
+  inc rsi
   inc rdi
   jmp parse_loop_del
 
 found_eof_del:
-  mov byte [rdi], 0       ; Tambahkan null terminator di akhir nama file
-
-  ; --- 2. Panggil Syscall unlink ---
+  mov byte [rdi], 0       
   mov rax, SYS_UNLINK
-  lea rdi, [parsed_filename] ; Argumen pertama adalah alamat nama file
+  lea rdi, [parsed_filename]
   syscall
 
-  ; --- 3. Cek Hasil dan Kirim Respons ---
-  cmp rax, 0              ; Cek apakah unlink berhasil (hasilnya 0)
-  jne handle_404       ; Jika tidak 0, berarti gagal
+  cmp rax, 0
+  jne handle_404 
 
   mov rsi, http_200
   mov rdx, len_200
   jmp send_response
 
 handle_put:
+  lea rsi, [request_buffer + 5] ; Offset 4 "PUT /"
+  lea rdi, [parsed_filename]
+parse_loop_put:
+  mov al, byte [rsi]
+  cmp al, ' '
+  je  found_eof_put
+  mov byte [rdi], al
+  inc rsi
+  inc rdi
+  jmp parse_loop_put
+found_eof_put:
+  mov byte [rdi], 0
+  ;call sanitize_filename
+  
+  xor rcx, rcx
+find_body_loop_put:
+  mov eax, dword [request_buffer + rcx]
+  cmp eax, 0A0D0A0Dh
+  je found_body_put
+  inc rcx
+  cmp rcx, r15
+  jl find_body_loop_put
+  jmp handle_400
+
+found_body_put:
+  lea rbx, [request_buffer + rcx + 4]
+  mov rdx, r15
+  sub rdx, rcx
+  sub rdx, 4
+  mov r15, rdx
+
+  mov rax, SYS_OPEN
+  lea rdi, [parsed_filename]
+  mov rsi, O_WRONLY or O_CREAT or O_TRUNC
+  mov rdx, 644o
+  syscall
+  mov r14, rax
+
+  mov rax, SYS_WRITE
+  mov rdi, r14
+  mov rsi, rbx
+  mov rdx, r15
+  syscall
+
+  mov rax, SYS_CLOSE
+  mov rdi, r14
+  syscall
+
   mov rsi, http_200
   mov rdx, len_200
   jmp send_response
