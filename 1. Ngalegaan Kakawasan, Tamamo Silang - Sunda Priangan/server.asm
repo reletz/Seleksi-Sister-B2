@@ -1,5 +1,7 @@
-format ELF64 executable
-entry start
+format ELF64
+
+public start
+extrn is_filename_safe
 
 ; rax = nomor syscall
 ; rdi = argumen 1
@@ -17,20 +19,19 @@ O_WRONLY    equ 1
 O_CREAT     equ 64
 O_TRUNC     equ 512
 
+SYS_READ    equ 0
+SYS_WRITE   equ 1
+SYS_OPEN    equ 2
+SYS_CLOSE   equ 3
 SYS_SOCKET  equ 41
+SYS_ACCEPT  equ 43
 SYS_BIND    equ 49
 SYS_LISTEN  equ 50
-SYS_ACCEPT  equ 43
-SYS_WRITE   equ 1
-SYS_CLOSE   equ 3
-SYS_EXIT    equ 60
 SYS_FORK    equ 57
-SYS_READ    equ 0
-SYS_OPEN    equ 2
-SYS_UNLINK equ 87
+SYS_EXIT    equ 60
+SYS_UNLINK  equ 87
 
-; --- Segmen Data ---
-segment readable writeable
+section '.data' writeable
   file_root db 'index.html', 0
   file_test db 'test.html', 0
 
@@ -54,15 +55,13 @@ segment readable writeable
   ; Path untuk routing
   path_test   db '/test'
 
-; --- Segmen BSS ---
-segment readable writeable
+section '.bss' writeable
   sockaddr_in     rb 16
   request_buffer  rb 2048
   file_buffer     rb 8192
   parsed_filename rb 256 ;
 
-; --- Segmen Kode ---
-segment readable executable
+section '.text' executable
 start:
   mov rax, SYS_SOCKET
   mov rdi, AF_INET
@@ -126,8 +125,26 @@ child_process:
   cmp eax, 'GET '
   je handle_get
 
-  ; Jika tidak ada yang cocok
   jmp handle_405
+
+parse_filename:
+  cmp byte [rsi], '/'
+  jne parse_loop ; ga diawali '/', langsung mulai parsing
+  inc rsi
+
+  parse_loop:
+    mov al, byte [rsi]
+    cmp al, ' '
+    je  found_eof
+
+    mov byte [rdi], al 
+    inc rsi 
+    inc rdi
+    jmp parse_loop
+
+  found_eof:
+    mov byte [rdi], 0 
+    ret 
 
 handle_post:
   xor rcx, rcx
@@ -179,21 +196,16 @@ write_post_to_file:
   jmp send_response
 
 handle_del:
-  lea rsi, [request_buffer + 8] 
-  lea rdi, [parsed_filename]   
+  lea rsi, [request_buffer + 7] ;"DELETE "
+  lea rdi, [parsed_filename]
+  call parse_filename
 
-parse_loop_del:
-  mov al, byte [rsi]
-  cmp al, ' '
-  je  found_eof_del
-  
-  mov byte [rdi], al
-  inc rsi
-  inc rdi
-  jmp parse_loop_del
+  lea rdi, [parsed_filename]
+  call is_filename_safe
 
-found_eof_del:
-  mov byte [rdi], 0       
+  cmp rax, 1
+  jne handle_400
+      
   mov rax, SYS_UNLINK
   lea rdi, [parsed_filename]
   syscall
@@ -206,19 +218,15 @@ found_eof_del:
   jmp send_response
 
 handle_put:
-  lea rsi, [request_buffer + 5] ; Offset 4 "PUT /"
+  lea rsi, [request_buffer + 4] ; Offset 4 "PUT "
   lea rdi, [parsed_filename]
-parse_loop_put:
-  mov al, byte [rsi]
-  cmp al, ' '
-  je  found_eof_put
-  mov byte [rdi], al
-  inc rsi
-  inc rdi
-  jmp parse_loop_put
-found_eof_put:
-  mov byte [rdi], 0
-  ;call sanitize_filename
+  call parse_filename
+
+  lea rdi, [parsed_filename]
+  call is_filename_safe
+
+  cmp rax, 1
+  jne handle_400
   
   xor rcx, rcx
 find_body_loop_put:
@@ -274,32 +282,22 @@ handle_405:
   jmp send_response
 
 handle_get:
-  lea rsi, [request_buffer + 5] ; rsi = pointer ke awal nama file di request
-  lea rdi, [parsed_filename]    ; rdi = pointer ke buffer tujuan
-  mov rcx, 5
-
-parse_loop_get:
-  mov al, byte [rsi]
-  cmp al, ' '
-  je  found_eof_get
-  mov byte [rdi], al
-  inc rsi
-  inc rdi
-  jmp parse_loop_get
-found_eof_get:
-  mov byte [rdi], 0
-
-  ; Jika path-nya hanya "/", hasil parsing akan menjadi string kosong.
-  cmp byte [parsed_filename], 0
-
+  lea rsi, [request_buffer + 4]
   lea rdi, [parsed_filename]
-  jne serve_parsed_file
+  call parse_filename
+
+  cmp byte [parsed_filename], 0
+  jne .validate_filename
 
   lea rdi, [file_root]
   jmp serve_file
 
-serve_parsed_file:
-  ; call sanitize_filename
+.validate_filename:
+  lea rdi, [parsed_filename]
+  call is_filename_safe
+  cmp rax, 1
+  jne handle_400
+
   lea rdi, [parsed_filename]
   jmp serve_file
 
