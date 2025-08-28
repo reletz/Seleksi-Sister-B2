@@ -21,6 +21,7 @@ Alasannya adalah... para dewa yang lain akan ngambek.
 
 Aku menatap layar, lalu menatap tumpukan kode di hadapanku. Visi surgawi itu pun memudar. Tak ada lagi dewan abadi, yang ada hanyalah sesama korban sistem yang kebetulan jabatannya lebih tinggi.
 
+<img width="280" height="69" alt="image" src="https://github.com/user-attachments/assets/3435a703-3298-4f3a-96e9-38f3045d56d5" />
 Gaada mukjizat undur deadline ya.
 
 Mari kita nguli syscall lagi.
