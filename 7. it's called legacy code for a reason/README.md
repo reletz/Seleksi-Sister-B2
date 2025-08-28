@@ -1,83 +1,74 @@
-Penyelesaian Soal: It’s Called ‘Legacy Code’ for a Reason
-Dokumen ini menjelaskan penyelesaian untuk soal "It’s Called ‘Legacy Code’ for a Reason" dari Seleksi Bagian B Laboratorium Sistem Terdistribusi 2025.
+# It’s Called ‘Legacy Code’ for a Reason
 
-Nama: Naufarrelza Zhafif Abhista
-NIM: (Silakan isi NIM Anda)
+## 1. Completed Bonus Tasks
 
-1. Keterangan Bonus yang Dikerjakan
-Berikut adalah daftar bonus yang telah berhasil dikerjakan:
+| No. | Bonus Name                      | Points | Status  | Description                                                                                                      |
+| --- | ------------------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | Conversion to Indonesian Rupiah | 2      | ✅ Done | Account balance is now displayed in Rupiah (IDR) using the suggested rate (1 Rai Stone ≈ Rp 120,000,000).        |
+| 2   | Deploy using Kubernetes         | 3      | ✅ Done | The application has been successfully deployed to a Kubernetes (k3s) cluster on a DigitalOcean VPS.              |
+| 3   | Add Reverse Proxy               | 2      | ✅ Done | An NGINX reverse proxy has been deployed in the cluster to handle incoming traffic before forwarding to the app. |
 
-No.
+## 2. How It Works
 
-Nama Bonus
+This project consists of a COBOL backend exposed via API using FastAPI (Python). The entire application is containerized with Docker and deployed to a Kubernetes cluster.
 
-Poin
+### Deployment Architecture
 
-Status
+The deployed application workflow is as follows:
 
-Keterangan
+1. **User Request:** User accesses http://138.68.59.2:30008.
+2. **Kubernetes Service (NodePort):** Requests enter the Kubernetes cluster via the NodePort exposed by the NGINX Service.
+3. **Reverse Proxy (NGINX):** The service forwards requests to the NGINX Pod, which acts as a reverse proxy and forwards traffic to the internal COBOL app service.
+4. **COBOL Application:** The `cobol-banking-service` receives requests and sends them to the COBOL/FastAPI app Pod for execution.
+5. **Response:** The COBOL program's result is returned through the same path back to the user.
 
-1
+### Running the Project from Scratch
 
-Konversi ke Indonesia Rupiah
+#### A. Local Preparation and Build
 
-2
+**Prerequisite:** Docker must be installed on your computer.
 
-✅ Selesai
+1. **Build Docker Image:** Open a terminal in the project directory and build the app image:
 
-Saldo akun kini ditampilkan dalam format Rupiah (IDR) dengan nilai tukar yang disarankan soal (1 Rai Stone ≈ Rp 120.000.000).
+- See: [Dockerfile](Dockerfile)
 
-2
+2. **Push Image to Registry:** To allow Kubernetes to access it, push the image to a registry like Docker Hub.
 
-Deploy menggunakan Kubernetes
+- See: [Dockerfile](Dockerfile)
 
-3
+#### B. Deploy to Kubernetes
 
-✅ Selesai
+**Prerequisites:**
 
-Aplikasi telah berhasil di-deploy ke cluster Kubernetes (k3s) yang berjalan di atas VPS DigitalOcean dan dapat diakses secara publik.
+- A running Kubernetes cluster (this project uses k3s on a VPS).
+- `kubectl` on your local machine configured to connect to the cluster.
+- The server firewall allows incoming traffic on port 30008.
 
-2. Penjelasan Cara Pengerjaan dan Menjalankan Proyek
-Proyek ini terdiri dari sebuah backend COBOL yang diekspos melalui API menggunakan FastAPI (Python). Seluruh aplikasi ini di-container-isasi menggunakan Docker dan di-deploy ke cluster Kubernetes.
+1. **Apply Manifest:** All Kubernetes configuration (Deployment, Service, ConfigMap) is combined in one file: [deployment.yaml](deployment.yaml)
 
-Alur Arsitektur (Disederhanakan)
-Permintaan Pengguna: Pengguna mengakses http://[ALAMAT_IP_VPS]:30007.
+- Run: `kubectl apply -f deployment.yaml`
 
-Firewall: Firewall di VPS mengizinkan lalu lintas masuk pada port 30007.
+2. **Verify and Access:**
 
-Service (NodePort): Kubernetes menerima permintaan pada NodePort dan meneruskannya langsung ke Service cobol-banking-service.
+- Wait about a minute, then check all pods are running with `kubectl get pods`. You should see two pods (`cobol-banking-app-...` and `nginx-reverse-proxy-...`) with status Running.
+- The app is publicly accessible at http://138.68.59.2:30008.
 
-Aplikasi: Service mengirimkan permintaan ke Pod aplikasi COBOL/FastAPI untuk diproses.
+## 3. Source Code
+.
+├── accounts.txt
+├── app.py
+├── deployment.yaml
+├── Dockerfile
+├── index.html
+├── input.txt
+├── main.cob
+├── nginx.conf
+├── output.txt
+├── README.md
+└── requirements.txt
 
-Respons: Hasil dari program COBOL dikembalikan melalui FastAPI ke pengguna.
+Please refer to the respective files for the full code and configuration details.
 
-Cara Menjalankan Proyek
-A. Membangun dan Menjalankan Secara Lokal (Docker)
-Prasyarat: Docker sudah terinstal di komputer.
-
-Build Image Docker: Buka terminal di direktori proyek dan jalankan:
-
-docker build -t cobol-app .
-
-Jalankan Container:
-
-docker run --rm -p 8000:8000 cobol-app
-
-Akses Aplikasi: Buka browser dan akses http://127.0.0.1:8000.
-
-B. Menjalankan di Lingkungan Produksi (Kubernetes)
-Prasyarat:
-
-Sebuah cluster Kubernetes (proyek ini menggunakan k3s di VPS).
-
-kubectl sudah terkonfigurasi untuk terhubung ke cluster.
-
-Image Docker sudah di-push ke sebuah registry (proyek ini menggunakan reletz/cobol-app:latest di Docker Hub).
-
-Terapkan Manifest:
-Hanya satu file yang dibutuhkan. Jalankan perintah berikut:
-
-# Deploy aplikasi COBOL dan Service-nya
-kubectl apply -f deployment.yaml
-
-Akses Aplikasi: Aplikasi akan dapat diakses secara publik di http://[ALAMAT_IP_VPS]:30007.
+## 4. Credits
+Credits to Gemini who guides me into deploying into kubernetes
+Also, credits to Riko for teaching me to make it a secure HTTPS (I failed bruh)
