@@ -4,7 +4,7 @@ A lightweight, blazing-fast HTTP server written in x86-64 assembly language.
 
 ---
 
-## � Source Code Program
+## Program Source Code
 
 - `server.asm` — Main HTTP server in x86-64 assembly
 - `helper.c` — Helper C code (if any)
@@ -25,6 +25,7 @@ A lightweight, blazing-fast HTTP server written in x86-64 assembly language.
   Place your HTML/CSS files in the same folder, then access them via browser:
   `http://localhost:8080/index.html`
 - **Screenshot:**
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/4937e65a-5521-423a-a61d-6c3779b05156" />
 
 ### 2. POST Request (Save Data)
 
@@ -38,6 +39,8 @@ A lightweight, blazing-fast HTTP server written in x86-64 assembly language.
   curl -X POST -d "data" http://localhost:8080
   ```
 - **Screenshot:**
+  <img width="1071" height="901" alt="image" src="https://github.com/user-attachments/assets/5b40170f-c973-4ba4-bab5-15f7476120f0" />
+
 
 ### 3. PUT & DELETE (Update & Delete File)
 
@@ -52,16 +55,36 @@ A lightweight, blazing-fast HTTP server written in x86-64 assembly language.
   curl -X DELETE http://localhost:8080/file.txt
   ```
 - **Screenshot:**
+  <img width="1114" height="974" alt="image" src="https://github.com/user-attachments/assets/c169e166-3406-447c-b19f-131512ea6c31" />
+  <img width="1065" height="908" alt="image" src="https://github.com/user-attachments/assets/b68f1b7f-5ed1-4798-9e28-9b5319fab25d" />
 
-### 4. Navigation & Search Endpoint (Frontend)
+### 4. Navigation & Search Endpoint (Frontend) [Creativity]
 
 - **Description:**
   The HTML page includes navigation and a search feature to easily switch endpoints.
 - **How it works:**
   Users can type a filename and will be redirected to that endpoint.
+  If the file cannot be accessed, it will give 404 Not Found or 400 Bad Request, depending on the file type.
 - **Instructions:**
   Open `index.html` in your browser and use the search bar.
+  
 - **Screenshot:**
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/dd99887b-8a57-46e9-8506-d68e3959eabf" />
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/10c992d5-d2cb-4002-9b7e-16bbf4f39e45" />
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/18651d5c-a271-4229-86bf-f71d8eadfbdf" />
+
+### 5. Port Forwarding
+
+- **Description:**
+  This can be port forwarded using ngrok.
+- **Instructions:**
+  Run the server. Then,
+  Type:
+  ```bash
+  ngrok http 8080
+  ```
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/fe71338e-d1b4-4ec9-81f8-03d5c814ee27" />
+<img width="1073" height="318" alt="image" src="https://github.com/user-attachments/assets/9c6fcca2-9f5d-4d68-8532-da097b0c9878" />
 
 ---
 
