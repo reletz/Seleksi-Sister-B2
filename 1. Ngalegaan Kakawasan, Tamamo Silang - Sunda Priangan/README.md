@@ -83,6 +83,7 @@ A lightweight, blazing-fast HTTP server written in x86-64 assembly language.
   ```bash
   ngrok http 8080
   ```
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/cf045979-bb06-46dc-be6f-f12e92fca918" />
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/fe71338e-d1b4-4ec9-81f8-03d5c814ee27" />
 <img width="1073" height="318" alt="image" src="https://github.com/user-attachments/assets/9c6fcca2-9f5d-4d68-8532-da097b0c9878" />
 
