@@ -1,0 +1,6 @@
+[submodule "B/2. Certified Tech Frustration/Distract and Destroy/proyek-ctf/lib/forge-std"]
+	path = B/2. Certified Tech Frustration/Distract and Destroy/proyek-ctf/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "B/2. Certified Tech Frustration/Distract and Destroy/lib/forge-std"]
+	path = B/2. Certified Tech Frustration/Distract and Destroy/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
