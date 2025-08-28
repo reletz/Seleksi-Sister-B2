@@ -31,6 +31,7 @@ SYS_FORK    equ 57
 SYS_EXIT    equ 60
 SYS_UNLINK  equ 87
 
+
 section '.data' writeable
   file_root db 'index.html', 0
   file_test db 'test.html', 0
@@ -38,6 +39,8 @@ section '.data' writeable
   ; Header HTTP
   http_200      db 'HTTP/1.1 200 OK', 0Dh, 0Ah, 'Content-Type: text/html', 0Dh, 0Ah, 0Dh, 0Ah
   len_200      = $ - http_200
+  http_css      db 'HTTP/1.1 200 OK', 0Dh, 0Ah, 'Content-Type: text/css', 0Dh, 0Ah, 0Dh, 0Ah
+  len_css      = $ - http_css
 
   post_filename db 'post_result.txt', 0
   http_201      db 'HTTP/1.1 201 Created', 0Dh, 0Ah, 0Dh, 0Ah, 'File created successfully.'
@@ -301,6 +304,7 @@ handle_get:
   lea rdi, [parsed_filename]
   jmp serve_file
 
+
 serve_file:
   mov rax, SYS_OPEN
   mov rsi, O_RDONLY
@@ -318,17 +322,70 @@ serve_file:
   mov rax, SYS_CLOSE
   mov rdi, r14
   syscall
+
+  ; cek apakah filename berakhiran .css
+  lea rsi, [parsed_filename]
+  call is_css_file
+  cmp rax, 1
+  je .send_css
+
+  ; default: kirim header html
   mov rax, SYS_WRITE
   mov rdi, r13
   mov rsi, http_200
   mov rdx, len_200
   syscall
-  mov rax, SYS_WRITE
-  mov rdi, r13
-  mov rsi, file_buffer
-  mov rdx, r15
-  syscall
-  jmp close_and_exit
+  jmp .send_file
+
+  .send_css:
+    mov rax, SYS_WRITE
+    mov rdi, r13
+    mov rsi, http_css
+    mov rdx, len_css
+    syscall
+
+  .send_file:
+    mov rax, SYS_WRITE
+    mov rdi, r13
+    mov rsi, file_buffer
+    mov rdx, r15
+    syscall
+    jmp close_and_exit
+
+is_css_file:
+  push rsi
+  push rcx
+  mov rcx, 0
+.find_end:
+  mov al, byte [rsi + rcx]
+  cmp al, 0
+  je .check_ext
+  inc rcx
+  jmp .find_end
+.check_ext:
+  cmp rcx, 4
+  jl .not_css
+  mov al, byte [rsi + rcx - 4]
+  cmp al, '.'
+  jne .not_css
+  mov al, byte [rsi + rcx - 3]
+  cmp al, 'c'
+  jne .not_css
+  mov al, byte [rsi + rcx - 2]
+  cmp al, 's'
+  jne .not_css
+  mov al, byte [rsi + rcx - 1]
+  cmp al, 's'
+  jne .not_css
+  mov rax, 1
+  pop rcx
+  pop rsi
+  ret
+.not_css:
+  xor rax, rax
+  pop rcx
+  pop rsi
+  ret
 
 send_response:
   mov rax, SYS_WRITE

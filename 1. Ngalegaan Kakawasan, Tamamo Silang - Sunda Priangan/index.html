@@ -1,10 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
+
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Halaman Utama</title>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <h1>Selamat Datang!</h1>
-  <p>GATAU LAH</p>
+  <header>
+    <nav>
+      <a href="index.html">Home</a> | <a href="test.html">Test</a> | <a href="server">Server</a>
+    </nav>
+    <h1>Selamat Datang di Halaman Utama!</h1>
+  </header>
+  <main>
+    <section>
+      <h2>GATAU LAH</h2>
+      <p>Bisa pindah-pindah endpoint make tombol search ini btw</p>
+      <form class="search-bar" onsubmit="goToFile(event)">
+        <input type="text" id="searchInput" placeholder="Cari file (misal: test.html)">
+        <button type="submit">Go</button>
+      </form>
+      <script>
+        function goToFile(e) {
+          if (e) e.preventDefault();
+          const file = document.getElementById('searchInput').value.trim();
+          if (file) {
+            window.location.href = file;
+          }
+        }
+      </script>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; Hayoo <a href="test.html">Ke Halaman Test</a></p>
+  </footer>
 </body>
+
 </html>
